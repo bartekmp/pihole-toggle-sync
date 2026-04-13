@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      new_tag: ${{ steps.bump.outputs.new_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,54 +29,59 @@ jobs:
           fetch-depth: 0
 
       - name: Bump version
+        id: bump
         run: |
           MSG=$(git log -1 --format=%s)
+          BUMP=""
 
           if echo "$MSG" | grep -q '\[skip\]'; then
             echo "Skipping version bump"
-            exit 0
-          fi
-
-          if echo "$MSG" | grep -qE '^feature:'; then
+          elif echo "$MSG" | grep -qE '^feature:'; then
             BUMP=minor
           elif echo "$MSG" | grep -qE '^fix:'; then
             BUMP=patch
           else
             echo "No version prefix found, skipping"
-            exit 0
           fi
 
-          LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          if [ -z "$LATEST" ]; then
-            LATEST="v0.0.0"
+          NEW_TAG=""
+          if [ -n "$BUMP" ]; then
+            LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+            [ -z "$LATEST" ] && LATEST="v0.0.0"
+
+            MAJOR=$(echo "$LATEST" | cut -d. -f1 | tr -d 'v')
+            MINOR=$(echo "$LATEST" | cut -d. -f2)
+            PATCH=$(echo "$LATEST" | cut -d. -f3)
+
+            if [ "$BUMP" = "minor" ]; then
+              MINOR=$((MINOR + 1))
+              PATCH=0
+            else
+              PATCH=$((PATCH + 1))
+            fi
+
+            NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+            echo "Tagging $NEW_TAG"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$NEW_TAG"
+            git push origin "$NEW_TAG"
           fi
 
-          MAJOR=$(echo "$LATEST" | cut -d. -f1 | tr -d 'v')
-          MINOR=$(echo "$LATEST" | cut -d. -f2)
-          PATCH=$(echo "$LATEST" | cut -d. -f3)
-
-          if [ "$BUMP" = "minor" ]; then
-            MINOR=$((MINOR + 1))
-            PATCH=0
-          else
-            PATCH=$((PATCH + 1))
-          fi
-
-          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
-          echo "Tagging $NEW_TAG"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$NEW_TAG"
-          git push origin "$NEW_TAG"
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
   build-and-push:
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'pull_request'
+    needs: [version]
+    if: |
+      always() && !failure() && !cancelled() && (
+        (needs.version.result == 'success' && needs.version.outputs.new_tag != '') ||
+        startsWith(github.ref, 'refs/tags/v') ||
+        github.event_name == 'pull_request'
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -93,17 +100,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve image version
+        id: ver
+        run: |
+          TAG="${{ needs.version.outputs.new_tag }}"
+          [ -z "$TAG" ] && TAG="${{ github.ref_name }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},value=${{ steps.ver.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.ver.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ steps.ver.outputs.tag }}
             type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ needs.version.outputs.new_tag != '' || startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
