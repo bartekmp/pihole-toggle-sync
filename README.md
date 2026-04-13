@@ -1,10 +1,12 @@
-# pihole-toggle-sync
+# <img src="www/favicon.svg" width="28" height="28" valign="middle"> Pi-hole Toggle Sync
 
 A lightweight web UI for toggling ad-blocking on one or more [Pi-hole](https://pi-hole.net/) instances simultaneously. Shows live stats per instance and syncs disable/enable actions across all of them at once.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Pi-hole](https://img.shields.io/badge/Pi--hole-v6%2B-red)
 ![Build](https://github.com/bartekmp/pihole-toggle-sync/actions/workflows/publish.yml/badge.svg)
+
+![Pi-hole Toggle Sync screenshot](pts.png)
 
 ---
 
