@@ -1,0 +1,10 @@
+services:
+  pihole-toggle-sync:
+    image: ghcr.io/bartekmp/pihole-toggle-sync:latest
+    container_name: pihole-toggle-sync
+    ports:
+      - "${LISTEN_PORT:-8087}:80"
+    environment:
+      PH_HOSTS: "${PH_HOSTS:-}"
+      PH_PASSWORD: "${PH_PASSWORD:-}"
+    restart: unless-stopped
