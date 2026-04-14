@@ -220,6 +220,12 @@
       color: var(--md-primary);
     }
 
+    .instance-subheader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
     .instance-blocking-badge {
       display: inline-flex;
       align-items: center;
@@ -228,9 +234,6 @@
       font-weight: 500;
       padding: 3px 8px;
       border-radius: 6px;
-      align-self: flex-start;
-      flex-shrink: 0;
-      white-space: nowrap;
     }
 
     .instance-blocking-badge.on {
@@ -840,6 +843,8 @@
       <div class="instance-header">
         <div class="instance-dot online"></div>
         <div class="instance-host">${hostLabel(host)}</div>
+      </div>
+      <div class="instance-subheader">
         <span class="instance-blocking-badge ${isBlocking ? 'on' : 'off'}">
           <span class="btn-icon">${isBlocking ? 'check_circle' : 'cancel'}</span>
           ${isBlocking ? 'Blocking' : 'Disabled'}
