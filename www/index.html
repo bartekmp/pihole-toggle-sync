@@ -6,6 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pi-hole toggle sync</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6750A4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1C1B1F" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PH Toggle">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
     href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0"
@@ -214,6 +220,12 @@
       color: var(--md-primary);
     }
 
+    .instance-subheader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
     .instance-blocking-badge {
       display: inline-flex;
       align-items: center;
@@ -222,7 +234,6 @@
       font-weight: 500;
       padding: 3px 8px;
       border-radius: 6px;
-      align-self: flex-start;
     }
 
     .instance-blocking-badge.on {
@@ -251,6 +262,35 @@
     .instance-error span {
       font-family: 'Material Symbols Rounded';
       font-size: 14px;
+    }
+
+    .instance-toggle-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      color: var(--md-on-surface-variant);
+      margin-left: 4px;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .instance-toggle-btn:hover {
+      background: color-mix(in srgb, var(--md-primary) 10%, transparent);
+      color: var(--md-primary);
+    }
+
+    .instance-toggle-btn:disabled {
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    .instance-toggle-btn .btn-icon {
+      font-family: 'Material Symbols Rounded';
+      font-size: 20px;
     }
 
     .instance-skeleton .stat-value {
@@ -460,6 +500,16 @@
       color: var(--md-on-primary);
     }
 
+    .md-btn.selected {
+      border-color: var(--md-primary);
+      background: color-mix(in srgb, var(--md-primary) 12%, var(--md-surface));
+    }
+
+    .md-btn.danger.selected {
+      border-color: var(--md-error);
+      background: color-mix(in srgb, var(--md-error) 12%, var(--md-surface));
+    }
+
 
     .custom-row {
       display: none;
@@ -598,19 +648,19 @@
 
     <div class="section-label">Disable blocking for</div>
     <div class="btn-grid" id="btn-grid">
-      <button class="md-btn" onclick="disableAll(30)">
+      <button class="md-btn" data-seconds="30" onclick="saveDuration(30); disableAll(30)">
         <span class="btn-icon">timer</span>30 seconds
       </button>
-      <button class="md-btn" onclick="disableAll(300)">
+      <button class="md-btn" data-seconds="300" onclick="saveDuration(300); disableAll(300)">
         <span class="btn-icon">timer</span>5 minutes
       </button>
-      <button class="md-btn" onclick="disableAll(600)">
+      <button class="md-btn" data-seconds="600" onclick="saveDuration(600); disableAll(600)">
         <span class="btn-icon">timer</span>10 minutes
       </button>
       <button class="md-btn" onclick="toggleCustomRow()">
         <span class="btn-icon">tune</span>Custom
       </button>
-      <button class="md-btn danger" onclick="disableAll(0)">
+      <button class="md-btn danger" data-seconds="0" onclick="saveDuration(0); disableAll(0)">
         <span class="btn-icon">timer_off</span>Indefinitely
       </button>
     </div>
@@ -647,14 +697,53 @@
 
     const sidCache = {};
 
+    function cleanHost(host) {
+      try {
+        const u = new URL(host);
+        u.username = '';
+        u.password = '';
+        return u.toString().replace(/\/$/, '');
+      } catch {}
+      return host;
+    }
+
+    function getPassword(host) {
+      try {
+        const u = new URL(host);
+        if (u.password) return decodeURIComponent(u.password);
+      } catch {}
+      return PH_PASSWORD;
+    }
+
+    function saveDuration(seconds) {
+      localStorage.setItem('ph_last_duration', String(seconds));
+    }
+
+    function loadDuration() {
+      const v = localStorage.getItem('ph_last_duration');
+      if (v === null) return 0;
+      const n = parseInt(v, 10);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function applyStoredDurationHighlight() {
+      const stored = localStorage.getItem('ph_last_duration');
+      if (stored === null) return;
+      const seconds = parseInt(stored, 10);
+      document.querySelectorAll('#btn-grid .md-btn[data-seconds]').forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.seconds, 10) === seconds);
+      });
+    }
+
     async function getSid(host) {
-      if (!PH_PASSWORD) return null;
+      const pwd = getPassword(host);
+      if (!pwd) return null;
       if (sidCache[host]) return sidCache[host];
       try {
-        const r = await fetch(host + '/api/auth', {
+        const r = await fetch(cleanHost(host) + '/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: PH_PASSWORD })
+          body: JSON.stringify({ password: pwd })
         });
         if (!r.ok) return null;
         const data = await r.json();
@@ -667,7 +756,7 @@
     }
 
     function hostLabel(h) {
-      return h.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+      return cleanHost(h).replace(/^https?:\/\//, '').replace(/:\d+$/, '');
     }
 
     function fmt(n) {
@@ -712,8 +801,8 @@
       if (sid) headers['X-FTL-SID'] = sid;
       try {
         const [statsRes, infoRes] = await Promise.all([
-          fetch(host + '/api/stats/summary', { headers }),
-          fetch(host + '/api/dns/blocking', { headers }),
+          fetch(cleanHost(host) + '/api/stats/summary', { headers }),
+          fetch(cleanHost(host) + '/api/dns/blocking', { headers }),
         ]);
         if (!statsRes.ok || !infoRes.ok) throw new Error('non-200');
         const stats = await statsRes.json();
@@ -754,10 +843,19 @@
       <div class="instance-header">
         <div class="instance-dot online"></div>
         <div class="instance-host">${hostLabel(host)}</div>
+      </div>
+      <div class="instance-subheader">
         <span class="instance-blocking-badge ${isBlocking ? 'on' : 'off'}">
           <span class="btn-icon">${isBlocking ? 'check_circle' : 'cancel'}</span>
           ${isBlocking ? 'Blocking' : 'Disabled'}
         </span>
+        <button class="instance-toggle-btn"
+          title="${isBlocking ? 'Disable blocking' : 'Enable blocking'}"
+          data-host="${btoa(host)}"
+          data-blocking="${isBlocking}"
+          onclick="handleToggleClick(this)">
+          <span class="btn-icon">${isBlocking ? 'pause_circle' : 'play_circle'}</span>
+        </button>
       </div>
       <div class="instance-stats">
         <div class="stat">
@@ -781,10 +879,32 @@
 
     async function refreshInstances() {
       renderSkeletons();
-      await Promise.all(instances.map(async host => {
+      const results = await Promise.all(instances.map(async host => {
         const data = await fetchInstanceInfo(host);
         updateInstanceCard(host, data);
+        return data;
       }));
+
+      renderChips(results.map(d => d.ok ? 'ok' : 'err'));
+
+      if (countdown !== null) return;
+
+      const online = results.filter(d => d.ok);
+      if (!online.length) return;
+
+      const anyDisabled = online.some(d => !(d.blocking?.blocking === true || d.blocking?.blocking === 'enabled'));
+      if (!anyDisabled) {
+        setCard('enabled', 'Blocking enabled', 'All instances are active', false);
+        return;
+      }
+
+      const timerSecs = Math.round(Math.max(0, ...online.map(d => d.blocking?.timer ?? 0)));
+      if (timerSecs > 0) {
+        setCard('disabled', 'Blocking disabled', 'Active bypass in progress', true);
+        startCountdown(timerSecs);
+      } else {
+        setCard('disabled', 'Blocking disabled', 'Disabled indefinitely', true);
+      }
     }
 
     /* ── Blocking control ── */
@@ -815,13 +935,33 @@
       });
     }
 
+    function handleToggleClick(btn) {
+      const host = atob(btn.dataset.host);
+      const isBlocking = btn.dataset.blocking === 'true';
+      toggleInstance(host, isBlocking);
+    }
+
+    async function toggleInstance(host, isBlocking) {
+      const card = document.getElementById('icard-' + btoa(host));
+      const btn = card ? card.querySelector('.instance-toggle-btn') : null;
+      if (btn) {
+        btn.disabled = true;
+        btn.querySelector('.btn-icon').textContent = 'sync';
+        btn.querySelector('.btn-icon').classList.add('spinning');
+      }
+      const duration = isBlocking ? loadDuration() : 0;
+      await apiCall(host, !isBlocking, duration);
+      const data = await fetchInstanceInfo(host);
+      updateInstanceCard(host, data);
+    }
+
     async function apiCall(host, enable, timer) {
       const body = enable ? { blocking: true } : { blocking: false, timer: timer || 0 };
       const sid = await getSid(host);
       const headers = { 'Content-Type': 'application/json' };
       if (sid) headers['X-FTL-SID'] = sid;
       try {
-        const r = await fetch(host + '/api/dns/blocking', { method: 'POST', headers, body: JSON.stringify(body) });
+        const r = await fetch(cleanHost(host) + '/api/dns/blocking', { method: 'POST', headers, body: JSON.stringify(body) });
         return r.ok ? 'ok' : 'err';
       } catch { return 'err'; }
     }
@@ -830,6 +970,17 @@
       if (s >= 3600) return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
       if (s >= 60) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
       return s + 's';
+    }
+
+    function startCountdown(seconds) {
+      clearInterval(countdown);
+      remaining = seconds;
+      document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
+      countdown = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) { clearInterval(countdown); countdown = null; enableAll(); return; }
+        document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
+      }, 1000);
     }
 
     function toggleCustomRow() {
@@ -843,11 +994,13 @@
       const unit = parseInt(document.getElementById('custom-unit').value, 10);
       if (!val || val < 1) return;
       document.getElementById('custom-row').classList.remove('visible');
+      saveDuration(val * unit);
       disableAll(val * unit);
     }
 
     async function disableAll(seconds) {
       clearInterval(countdown);
+      countdown = null;
       setCard('loading', 'Contacting instances\u2026', 'Please wait\u2026', false);
       document.getElementById('host-chips').innerHTML = '';
       document.getElementById('timer-label').textContent = '';
@@ -863,14 +1016,8 @@
       if (seconds === 0) {
         setCard('disabled', 'Blocking disabled', 'Disabled indefinitely', true);
       } else {
-        remaining = seconds;
         setCard('disabled', 'Blocking disabled', 'Active bypass in progress', true);
-        document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
-        countdown = setInterval(() => {
-          remaining--;
-          if (remaining <= 0) { clearInterval(countdown); enableAll(); return; }
-          document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
-        }, 1000);
+        startCountdown(seconds);
       }
 
       setTimeout(refreshInstances, 800);
@@ -878,6 +1025,7 @@
 
     async function enableAll() {
       clearInterval(countdown);
+      countdown = null;
       setCard('loading', 'Re-enabling blocking\u2026', 'Please wait\u2026', false);
       document.getElementById('host-chips').innerHTML = '';
       document.getElementById('timer-label').textContent = '';
@@ -890,6 +1038,7 @@
     }
 
     refreshInstances();
+    applyStoredDurationHighlight();
     setInterval(refreshInstances, 30000);
   </script>
 </body>

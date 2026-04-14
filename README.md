@@ -6,7 +6,7 @@ A lightweight web UI for toggling ad-blocking on one or more [Pi-hole](https://p
 ![Pi-hole](https://img.shields.io/badge/Pi--hole-v6%2B-red)
 ![Build](https://github.com/bartekmp/pihole-toggle-sync/actions/workflows/publish.yml/badge.svg)
 
-![Pi-hole Toggle Sync screenshot](pts.png)
+![Pi-hole Toggle Sync screenshot](pts.png) ![Pi-hole Toggle Sync — blocking disabled](pts-disabled.png)
 
 ---
 
@@ -75,16 +75,21 @@ All configuration is done at **runtime** via environment variables — the image
 
 | Variable | Default | Description |
 |---|---|---|
-| `PH_HOSTS` | *(empty)* | Comma-separated list of Pi-hole base URLs |
-| `PH_PASSWORD` | *(empty)* | Pi-hole web password — leave empty if none is set |
+| `PH_HOSTS` | *(empty)* | Comma-separated list of Pi-hole base URLs. Embed a per-instance password with `http://:password@host` syntax. |
+| `PH_PASSWORD` | *(empty)* | Shared Pi-hole password used for instances without an embedded credential. Leave empty if none is set. |
 | `LISTEN_PORT` | `8087` | Host port to expose the UI on |
 
 ### Example `.env`
 
 ```env
+# Both instances share one password:
 PH_HOSTS=https://pihole.example.com,https://pihole2.example.com
 PH_PASSWORD=yourpassword
 LISTEN_PORT=8087
+
+# Or give pihole2 its own password:
+# PH_HOSTS=https://pihole.example.com,https://:differentpassword@pihole2.example.com
+# PH_PASSWORD=yourpassword
 ```
 
 ## CORS and reverse proxy
