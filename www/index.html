@@ -647,14 +647,33 @@
 
     const sidCache = {};
 
+    function cleanHost(host) {
+      try {
+        const u = new URL(host);
+        u.username = '';
+        u.password = '';
+        return u.toString().replace(/\/$/, '');
+      } catch {}
+      return host;
+    }
+
+    function getPassword(host) {
+      try {
+        const u = new URL(host);
+        if (u.password) return decodeURIComponent(u.password);
+      } catch {}
+      return PH_PASSWORD;
+    }
+
     async function getSid(host) {
-      if (!PH_PASSWORD) return null;
+      const pwd = getPassword(host);
+      if (!pwd) return null;
       if (sidCache[host]) return sidCache[host];
       try {
-        const r = await fetch(host + '/api/auth', {
+        const r = await fetch(cleanHost(host) + '/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: PH_PASSWORD })
+          body: JSON.stringify({ password: pwd })
         });
         if (!r.ok) return null;
         const data = await r.json();
@@ -667,7 +686,7 @@
     }
 
     function hostLabel(h) {
-      return h.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+      return cleanHost(h).replace(/^https?:\/\//, '').replace(/:\d+$/, '');
     }
 
     function fmt(n) {
@@ -712,8 +731,8 @@
       if (sid) headers['X-FTL-SID'] = sid;
       try {
         const [statsRes, infoRes] = await Promise.all([
-          fetch(host + '/api/stats/summary', { headers }),
-          fetch(host + '/api/dns/blocking', { headers }),
+          fetch(cleanHost(host) + '/api/stats/summary', { headers }),
+          fetch(cleanHost(host) + '/api/dns/blocking', { headers }),
         ]);
         if (!statsRes.ok || !infoRes.ok) throw new Error('non-200');
         const stats = await statsRes.json();
@@ -821,7 +840,7 @@
       const headers = { 'Content-Type': 'application/json' };
       if (sid) headers['X-FTL-SID'] = sid;
       try {
-        const r = await fetch(host + '/api/dns/blocking', { method: 'POST', headers, body: JSON.stringify(body) });
+        const r = await fetch(cleanHost(host) + '/api/dns/blocking', { method: 'POST', headers, body: JSON.stringify(body) });
         return r.ok ? 'ok' : 'err';
       } catch { return 'err'; }
     }
