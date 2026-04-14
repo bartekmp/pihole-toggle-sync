@@ -40,6 +40,10 @@ jobs:
             BUMP=minor
           elif echo "$MSG" | grep -qE '^fix:'; then
             BUMP=patch
+          elif echo "$MSG" | grep -qE '^Merge pull request #[0-9]+ from .+/feature/'; then
+            BUMP=minor
+          elif echo "$MSG" | grep -qE '^Merge pull request #[0-9]+ from .+/fix/'; then
+            BUMP=patch
           else
             echo "No version prefix found, skipping"
           fi
