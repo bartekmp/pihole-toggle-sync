@@ -872,10 +872,30 @@
 
     async function refreshInstances() {
       renderSkeletons();
-      await Promise.all(instances.map(async host => {
+      const results = await Promise.all(instances.map(async host => {
         const data = await fetchInstanceInfo(host);
         updateInstanceCard(host, data);
+        return data;
       }));
+
+      if (countdown !== null) return;
+
+      const online = results.filter(d => d.ok);
+      if (!online.length) return;
+
+      const anyDisabled = online.some(d => !(d.blocking?.blocking === true || d.blocking?.blocking === 'enabled'));
+      if (!anyDisabled) {
+        setCard('enabled', 'Blocking enabled', 'All instances are active', false);
+        return;
+      }
+
+      const timerSecs = Math.round(Math.max(0, ...online.map(d => d.blocking?.timer ?? 0)));
+      if (timerSecs > 0) {
+        setCard('disabled', 'Blocking disabled', 'Active bypass in progress', true);
+        startCountdown(timerSecs);
+      } else {
+        setCard('disabled', 'Blocking disabled', 'Disabled indefinitely', true);
+      }
     }
 
     /* ── Blocking control ── */
@@ -943,6 +963,17 @@
       return s + 's';
     }
 
+    function startCountdown(seconds) {
+      clearInterval(countdown);
+      remaining = seconds;
+      document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
+      countdown = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) { clearInterval(countdown); countdown = null; enableAll(); return; }
+        document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
+      }, 1000);
+    }
+
     function toggleCustomRow() {
       const row = document.getElementById('custom-row');
       row.classList.toggle('visible');
@@ -960,6 +991,7 @@
 
     async function disableAll(seconds) {
       clearInterval(countdown);
+      countdown = null;
       setCard('loading', 'Contacting instances\u2026', 'Please wait\u2026', false);
       document.getElementById('host-chips').innerHTML = '';
       document.getElementById('timer-label').textContent = '';
@@ -975,14 +1007,8 @@
       if (seconds === 0) {
         setCard('disabled', 'Blocking disabled', 'Disabled indefinitely', true);
       } else {
-        remaining = seconds;
         setCard('disabled', 'Blocking disabled', 'Active bypass in progress', true);
-        document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
-        countdown = setInterval(() => {
-          remaining--;
-          if (remaining <= 0) { clearInterval(countdown); enableAll(); return; }
-          document.getElementById('timer-label').textContent = 'Re-enables in ' + formatTime(remaining);
-        }, 1000);
+        startCountdown(seconds);
       }
 
       setTimeout(refreshInstances, 800);
@@ -990,6 +1016,7 @@
 
     async function enableAll() {
       clearInterval(countdown);
+      countdown = null;
       setCard('loading', 'Re-enabling blocking\u2026', 'Please wait\u2026', false);
       document.getElementById('host-chips').innerHTML = '';
       document.getElementById('timer-label').textContent = '';
