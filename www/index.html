@@ -229,6 +229,8 @@
       padding: 3px 8px;
       border-radius: 6px;
       align-self: flex-start;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
 
     .instance-blocking-badge.on {
@@ -877,6 +879,8 @@
         updateInstanceCard(host, data);
         return data;
       }));
+
+      renderChips(results.map(d => d.ok ? 'ok' : 'err'));
 
       if (countdown !== null) return;
 
