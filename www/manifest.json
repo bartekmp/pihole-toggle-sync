@@ -1,0 +1,17 @@
+{
+  "name": "Pi-hole Toggle Sync",
+  "short_name": "PH Toggle",
+  "description": "Toggle ad-blocking across Pi-hole instances",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFBFE",
+  "theme_color": "#6750A4",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

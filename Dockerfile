@@ -2,6 +2,7 @@ FROM nginx:alpine
 
 COPY www/index.html /usr/share/nginx/html/index.html.template
 COPY www/favicon.svg /usr/share/nginx/html/favicon.svg
+COPY www/manifest.json /usr/share/nginx/html/manifest.json
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker-entrypoint.d/40-envsubst-html.sh /docker-entrypoint.d/40-envsubst-html.sh
 RUN chmod +x /docker-entrypoint.d/40-envsubst-html.sh
