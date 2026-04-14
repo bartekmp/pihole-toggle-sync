@@ -253,6 +253,35 @@
       font-size: 14px;
     }
 
+    .instance-toggle-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      color: var(--md-on-surface-variant);
+      margin-left: 4px;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .instance-toggle-btn:hover {
+      background: color-mix(in srgb, var(--md-primary) 10%, transparent);
+      color: var(--md-primary);
+    }
+
+    .instance-toggle-btn:disabled {
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    .instance-toggle-btn .btn-icon {
+      font-family: 'Material Symbols Rounded';
+      font-size: 20px;
+    }
+
     .instance-skeleton .stat-value {
       background: var(--md-surface-variant);
       color: transparent;
@@ -807,6 +836,13 @@
           <span class="btn-icon">${isBlocking ? 'check_circle' : 'cancel'}</span>
           ${isBlocking ? 'Blocking' : 'Disabled'}
         </span>
+        <button class="instance-toggle-btn"
+          title="${isBlocking ? 'Disable blocking' : 'Enable blocking'}"
+          data-host="${btoa(host)}"
+          data-blocking="${isBlocking}"
+          onclick="handleToggleClick(this)">
+          <span class="btn-icon">${isBlocking ? 'pause_circle' : 'play_circle'}</span>
+        </button>
       </div>
       <div class="instance-stats">
         <div class="stat">
@@ -862,6 +898,26 @@
         c.innerHTML = `<span class="chip-icon">${r === 'ok' ? 'check_circle' : 'error'}</span>${hostLabel(instances[i])}`;
         wrap.appendChild(c);
       });
+    }
+
+    function handleToggleClick(btn) {
+      const host = atob(btn.dataset.host);
+      const isBlocking = btn.dataset.blocking === 'true';
+      toggleInstance(host, isBlocking);
+    }
+
+    async function toggleInstance(host, isBlocking) {
+      const card = document.getElementById('icard-' + btoa(host));
+      const btn = card ? card.querySelector('.instance-toggle-btn') : null;
+      if (btn) {
+        btn.disabled = true;
+        btn.querySelector('.btn-icon').textContent = 'sync';
+        btn.querySelector('.btn-icon').classList.add('spinning');
+      }
+      const duration = isBlocking ? loadDuration() : 0;
+      await apiCall(host, !isBlocking, duration);
+      const data = await fetchInstanceInfo(host);
+      updateInstanceCard(host, data);
     }
 
     async function apiCall(host, enable, timer) {
