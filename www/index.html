@@ -460,6 +460,16 @@
       color: var(--md-on-primary);
     }
 
+    .md-btn.selected {
+      border-color: var(--md-primary);
+      background: color-mix(in srgb, var(--md-primary) 12%, var(--md-surface));
+    }
+
+    .md-btn.danger.selected {
+      border-color: var(--md-error);
+      background: color-mix(in srgb, var(--md-error) 12%, var(--md-surface));
+    }
+
 
     .custom-row {
       display: none;
@@ -598,19 +608,19 @@
 
     <div class="section-label">Disable blocking for</div>
     <div class="btn-grid" id="btn-grid">
-      <button class="md-btn" onclick="disableAll(30)">
+      <button class="md-btn" data-seconds="30" onclick="saveDuration(30); disableAll(30)">
         <span class="btn-icon">timer</span>30 seconds
       </button>
-      <button class="md-btn" onclick="disableAll(300)">
+      <button class="md-btn" data-seconds="300" onclick="saveDuration(300); disableAll(300)">
         <span class="btn-icon">timer</span>5 minutes
       </button>
-      <button class="md-btn" onclick="disableAll(600)">
+      <button class="md-btn" data-seconds="600" onclick="saveDuration(600); disableAll(600)">
         <span class="btn-icon">timer</span>10 minutes
       </button>
       <button class="md-btn" onclick="toggleCustomRow()">
         <span class="btn-icon">tune</span>Custom
       </button>
-      <button class="md-btn danger" onclick="disableAll(0)">
+      <button class="md-btn danger" data-seconds="0" onclick="saveDuration(0); disableAll(0)">
         <span class="btn-icon">timer_off</span>Indefinitely
       </button>
     </div>
@@ -663,6 +673,26 @@
         if (u.password) return decodeURIComponent(u.password);
       } catch {}
       return PH_PASSWORD;
+    }
+
+    function saveDuration(seconds) {
+      localStorage.setItem('ph_last_duration', String(seconds));
+    }
+
+    function loadDuration() {
+      const v = localStorage.getItem('ph_last_duration');
+      if (v === null) return 0;
+      const n = parseInt(v, 10);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function applyStoredDurationHighlight() {
+      const stored = localStorage.getItem('ph_last_duration');
+      if (stored === null) return;
+      const seconds = parseInt(stored, 10);
+      document.querySelectorAll('#btn-grid .md-btn[data-seconds]').forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.seconds, 10) === seconds);
+      });
     }
 
     async function getSid(host) {
@@ -862,6 +892,7 @@
       const unit = parseInt(document.getElementById('custom-unit').value, 10);
       if (!val || val < 1) return;
       document.getElementById('custom-row').classList.remove('visible');
+      saveDuration(val * unit);
       disableAll(val * unit);
     }
 
@@ -909,6 +940,7 @@
     }
 
     refreshInstances();
+    applyStoredDurationHighlight();
     setInterval(refreshInstances, 30000);
   </script>
 </body>
