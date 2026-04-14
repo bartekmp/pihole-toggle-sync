@@ -10,6 +10,23 @@ A lightweight web UI for toggling ad-blocking on one or more [Pi-hole](https://p
 
 ---
 
+## Why run redundant Pi-hole instances?
+
+A single Pi-hole is a convenient network-wide ad blocker, but it also becomes a **single point of failure** for all DNS resolution on your network. If it goes down for a reboot, update, or hardware issue, every device on your network loses DNS — and with it, internet access.
+
+Running two (or more) Pi-hole instances in parallel solves this:
+
+- **High availability** — configure your router to hand out both Pi-hole IPs as DNS servers. If one goes down, clients automatically fall back to the other with no interruption.
+- **Maintenance without downtime** — update or restart one instance while the other keeps serving queries.
+- **Load distribution** — DNS queries are spread across instances, reducing per-instance load on busy networks.
+- **Consistency** — both instances should have identical blocklists and settings. Keeping them in sync manually is error-prone; tools like [Nebula Sync](https://github.com/lovelaze/nebula-sync) or Pi-hole's built-in Teleporter can help.
+
+The catch: **any action you take on one instance** — such as temporarily disabling blocking to let a site through — **must be mirrored on the other**, or traffic will simply be blocked by whichever instance the client happens to query. Doing this manually across two browser tabs is tedious and easy to forget.
+
+That is what this tool is for.
+
+---
+
 ## Features
 
 - Per-instance info cards showing queries today, blocked count, block rate, and blocklist size
