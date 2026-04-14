@@ -6,7 +6,7 @@ A lightweight web UI for toggling ad-blocking on one or more [Pi-hole](https://p
 ![Pi-hole](https://img.shields.io/badge/Pi--hole-v6%2B-red)
 ![Build](https://github.com/bartekmp/pihole-toggle-sync/actions/workflows/publish.yml/badge.svg)
 
-![Pi-hole Toggle Sync screenshot](pts.png)
+![Pi-hole Toggle Sync screenshot](pts.png) ![Pi-hole Toggle Sync — blocking disabled](pts-disabled.png)
 
 ---
 
