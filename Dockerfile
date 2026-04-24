@@ -1,5 +1,8 @@
 FROM nginx:alpine
 
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 COPY www/index.html /usr/share/nginx/html/index.html.template
 COPY www/favicon.svg /usr/share/nginx/html/favicon.svg
 COPY www/manifest.json /usr/share/nginx/html/manifest.json
