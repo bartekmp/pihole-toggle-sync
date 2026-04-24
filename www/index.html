@@ -186,6 +186,16 @@
       white-space: nowrap;
     }
 
+    .instance-host a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .instance-host a:hover {
+      text-decoration: underline;
+      color: var(--md-primary);
+    }
+
     .instance-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -680,7 +690,7 @@
 
   <footer>
     <a href="https://github.com/bartekmp/pihole-toggle-sync" target="_blank">pihole-toggle-sync</a>
-    &mdash; MIT license
+    ${APP_VERSION} &mdash; MIT license
   </footer>
 
   <script>
@@ -823,7 +833,7 @@
         card.innerHTML = `
         <div class="instance-header">
           <div class="instance-dot offline"></div>
-          <div class="instance-host">${hostLabel(host)}</div>
+          <div class="instance-host"><a href="${cleanHost(host)}/admin" target="_blank" rel="noopener noreferrer">${hostLabel(host)}</a></div>
         </div>
         <div class="instance-error">
           <span>error</span>Unable to reach instance
@@ -842,7 +852,7 @@
       card.innerHTML = `
       <div class="instance-header">
         <div class="instance-dot online"></div>
-        <div class="instance-host">${hostLabel(host)}</div>
+        <div class="instance-host"><a href="${cleanHost(host)}/admin" target="_blank" rel="noopener noreferrer">${hostLabel(host)}</a></div>
       </div>
       <div class="instance-subheader">
         <span class="instance-blocking-badge ${isBlocking ? 'on' : 'off'}">
@@ -956,7 +966,7 @@
     }
 
     async function apiCall(host, enable, timer) {
-      const body = enable ? { blocking: true } : { blocking: false, timer: timer || 0 };
+      const body = enable ? { blocking: true } : (timer ? { blocking: false, timer } : { blocking: false });
       const sid = await getSid(host);
       const headers = { 'Content-Type': 'application/json' };
       if (sid) headers['X-FTL-SID'] = sid;
